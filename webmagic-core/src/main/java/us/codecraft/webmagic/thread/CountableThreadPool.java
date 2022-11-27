@@ -54,6 +54,7 @@ public class CountableThreadPool {
 
 
         if (threadAlive.get() >= threadNum) {
+            //A: 当检测到活跃线程(工作线程)已经达到最大线程数时, 获取锁并使用condition.await释放锁并等待唤醒
             try {
                 reentrantLock.lock();
                 while (threadAlive.get() >= threadNum) {
@@ -66,7 +67,7 @@ public class CountableThreadPool {
                 reentrantLock.unlock();
             }
         }
-        threadAlive.incrementAndGet();
+        threadAlive.incrementAndGet();   //C: 在B工作完成之后, A被唤醒了, 此时开始工作并把活跃线程(工作线程)数量+1
         executorService.execute(new Runnable() {
             @Override
             public void run() {
@@ -74,6 +75,7 @@ public class CountableThreadPool {
                     runnable.run();
                 } finally {
                     try {
+                        //B: 运行在等待线程之前的线程, 任务完成后, 获取锁并把活跃线程(工作线程)数-1 并通知等待线程
                         reentrantLock.lock();
                         threadAlive.decrementAndGet();
                         condition.signal();
